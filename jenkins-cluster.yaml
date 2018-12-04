@@ -1,0 +1,84 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jenkins
+spec:
+  replicas: 1
+  selector:
+   matchLabels:
+    app: jenkins
+  template:
+    metadata:
+      labels:
+        app: jenkins
+    spec:
+      containers:
+      - name: jenkins
+        image: mycloudfun/jenkins:1.0
+        env:
+         - name: JAVA_OPTS
+           value: "-Djenkins.install.runSetupWizard=false"
+         - name: JENKINS_OPTS
+           value: "--prefix=/jenkins"
+        ports:
+        - name: http-port
+          containerPort: 8080
+        - name: jnlp-port
+          containerPort: 50000
+        volumeMounts:
+          - name: jenkins-home
+            mountPath: /var/jenkins_home
+      volumes:
+        - name: jenkins-home
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: jenkins-service
+spec:
+  ports:
+    - port: 80
+      targetPort: 8080
+      protocol: TCP
+      name: http
+    - port: 50000
+      targetPort: 50000
+      protocol: TCP
+      name: jnlp
+  selector:
+    app: jenkins
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: jenkins-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: "/jenkins"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      rewrite ^(/jenkins)$ http://$best_http_host$1/ permanent;
+spec:
+  rules:
+  - http:
+      paths:
+        - path: /jenkins
+          backend:
+            serviceName: jenkins-service
+            servicePort: 8080
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: fabric8-rbac
+subjects:
+  - kind: ServiceAccount
+    # Reference to upper's `metadata.name`
+    name: default
+    # Reference to upper's `metadata.namespace`
+    namespace: default
+roleRef:
+  kind: ClusterRole
+  name: cluster-admin
+  apiGroup: rbac.authorization.k8s.io
