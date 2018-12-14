@@ -15,10 +15,10 @@ spec:
     spec:
       containers:
       - name: jenkins
-        image: mycloudfun/jenkins:1.0
+        image: mycloudfun/jenkins:1.6
         env:
-         - name: JAVA_OPTS
-           value: "-Djenkins.install.runSetupWizard=false"
+#         - name: JAVA_OPTS
+#           value: "-Djenkins.install.runSetupWizard=false"
          - name: JENKINS_OPTS
            value: "--prefix=/jenkins"
         ports:
